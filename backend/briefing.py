@@ -60,13 +60,12 @@ def stream_briefing(topics: List[str]) -> Generator[str, None, None]:
     client = Groq(api_key=api_key)
 
     topics_text = "\n".join([f"- {topic}" for topic in topics[:30]])
-
     prompt = f"""JSON ARRAY.
 
 Structure:
 - h1: "Tech Industry Briefing"
 - h2: sectors (AI, Video Games, Economics, Infrastructure, etc.)
-- Each sector: 1 short p + EXACTLY 2 li
+- Each sector: 1 descriptive p + EXACTLY 2 li
 - End with h2 "Where to Invest" + 1 p
 
 Topics: {topics_text}
@@ -75,37 +74,25 @@ FORMAT EXAMPLE (JSON):
 [
 {{"type":"h1","content":"Tech Industry Briefing","className":"text-lg font-bold"}},
 {{"type":"h2","content":"AI & Machine Learning","className":"text-base font-bold"}},
-{{"type":"p","content":"Key AI developments.","className":"text-sm"}},
-{{"type":"li","content":"OpenAI launches GPT-5","className":"text-sm"}},
-{{"type":"li","content":"DeepMind improves AlphaFold","className":"text-sm"}},
+{{"type":"p","content":"AI is rapidly evolving with strong commercial adoption and societal impact.","className":"text-sm"}},
+{{"type":"li","content":"OpenAI launches GPT-5 improving reasoning and enterprise use cases","className":"text-sm"}},
+{{"type":"li","content":"DeepMind advances AlphaFold enabling faster scientific discoveries","className":"text-sm"}},
 {{"type":"h2","content":"Where to Invest","className":"text-base font-bold"}},
-{{"type":"p","content":"Focus on AI and semiconductors","className":"text-sm"}}
+{{"type":"p","content":"Focus on AI infrastructure, semiconductors and scalable software platforms","className":"text-sm"}}
 ]
-
-FORMAT EXAMPLE (.toon reference):
-[h1] Tech Industry Briefing
-[h2] AI & Machine Learning
-[p] Key AI developments.
-[li] OpenAI launches GPT-5
-[li] DeepMind improves AlphaFold
-[h2] Where to Invest
-[p] Focus on AI and semiconductors
 
 IMPORTANT RULES:
 - RESPOND ONLY WITH VALID JSON ARRAY
-- Keep content SHORT and concise
-- Max 12-14 words per li
-- Max 20 words per p
+- Each p MUST give context or trend (not generic)
+- 60-200 words per p
+- 14-22 words per li
 - ALWAYS 2 li per sector (no more, no less)
 - Only include relevant sectors
 - Mention specific companies/projects when possible
 
-- Output must ALWAYS be a complete and valid JSON array
-- NEVER cut off mid-object or mid-array
-- Ensure all brackets and objects are properly closed
-- If response is too long, reduce number of sectors or text length
-- Priority: valid JSON over completeness of content
-- It is better to return fewer sectors than broken JSON
+- Output must ALWAYS be complete valid JSON
+- NEVER cut JSON
+- If too long, reduce sectors instead of truncating
 
 - NO markdown, NO explanations
 - NO text before/after JSON
@@ -122,7 +109,7 @@ GENERATE NOW:"""
                 }
             ],
             temperature=1,
-            max_tokens=512,
+            max_tokens=800,
             top_p=1,
             stream=True,
             stop=None,
