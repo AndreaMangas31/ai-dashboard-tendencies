@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime
+import json
 from typing import List
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -96,11 +97,41 @@ async def get_briefing():
 
         # Extract top 30 titles for the briefing
         topics = [item["title"] for item in all_items[:30]]
+        
+        print(f"[DEBUG BRIEFING] Topics count: {len(topics)}")
+        print(f"[DEBUG BRIEFING] Hackernews items: {len(hackernews_items)}")
+        print(f"[DEBUG BRIEFING] Reddit items: {len(reddit_items)}")
+        print(f"[DEBUG BRIEFING] ProductHunt items: {len(producthunt_items)}")
+        
+        # Validar que hay tópicos antes de solicitar a Groq
+        if not topics:
+            print(f"[ERROR] No topics available from scrapers. Aborting Groq request.")
+            def error_generator():
+                error_response = json.dumps({
+                    "error": "No trending topics available. Scrapers returned empty data.",
+                    "details": {
+                        "hackernews_items": len(hackernews_items),
+                        "reddit_items": len(reddit_items),
+                        "producthunt_items": len(producthunt_items),
+                    }
+                })
+                yield f"data: {error_response}\n\n"
+            return StreamingResponse(error_generator(), media_type="text/event-stream")
 
         # Stream the briefing
         def generate():
             for chunk in stream_briefing(topics):
-                yield f"data: {chunk}\n\n"
+                # Minificar JSON para SSE (eliminar saltos de línea)
+                try:
+                    parsed = json.loads(chunk)
+                    minified = json.dumps(parsed, separators=(',', ':'))
+                    print(f"[DEBUG] Sending minified JSON: {minified[:100]}...")
+                    yield f"data: {minified}\n\n"
+                except:
+                    # Si no es JSON válido, enviar como está
+                    print(f"[DEBUG] Sending non-JSON WTF chunk: {chunk}")
+                    print(f"[DEBUG] Sending non-JSON chunk: {chunk[:100]}")
+                    yield f"data: {chunk}\n\n"
 
         return StreamingResponse(generate(), media_type="text/event-stream")
     except Exception as e:

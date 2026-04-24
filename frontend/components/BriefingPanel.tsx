@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
-import { ParsedElement } from "@/lib/helpers/useMarkdownParser";
 import { useMarkdownRenderer } from "@/lib/helpers/useMarkdownRenderer";
 import { useStreamBriefing } from "@/hooks/useStreamBriefing";
+import { ParsedElement } from "@/lib/helpers/useMarkdownParser";
 
 interface BriefingPanelProps {
   open: boolean;
@@ -13,7 +13,8 @@ interface BriefingPanelProps {
 }
 
 export function BriefingPanel({ open, onClose }: BriefingPanelProps) {
-  const { elements, streaming, startStream, reset } = useStreamBriefing();
+  const { elements, streaming, error, rateLimitInfo, startStream, reset } =
+    useStreamBriefing();
   const [copied, setCopied] = useState<boolean>(false);
 
   useEffect(() => {
@@ -76,6 +77,49 @@ export function BriefingPanel({ open, onClose }: BriefingPanelProps) {
           {elements.length > 0 ? (
             <div className="flex flex-col gap-2 prose prose-invert max-w-none text-sm">
               <BriefingContent elements={elements} />
+            </div>
+          ) : rateLimitInfo ? (
+            // Mostrar información de rate limit
+            <div className="bg-red-900/30 border border-red-500 rounded-lg p-4 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-2 h-2 bg-red-500 rounded-full mt-1.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="font-bold text-red-400">
+                    Groq Rate Limit Exceeded
+                  </p>
+                  <p className="text-sm text-slate-300 mt-2">{error}</p>
+                </div>
+              </div>
+              <div className="bg-slate-900/50 rounded p-3 text-xs space-y-1 font-mono">
+                <div className="flex justify-between text-slate-400">
+                  <span>Daily Limit:</span>
+                  <span className="text-slate-200">
+                    {rateLimitInfo.limit.toLocaleString()} tokens
+                  </span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Tokens Used:</span>
+                  <span className="text-slate-200">
+                    {rateLimitInfo.used.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Remaining:</span>
+                  <span className="text-red-400 font-bold">
+                    {rateLimitInfo.remaining.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between text-slate-400 pt-2 border-t border-slate-800">
+                  <span>Reset In:</span>
+                  <span className="text-yellow-400">
+                    {rateLimitInfo.resetIn}
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-slate-400 italic">
+                Please try again after {rateLimitInfo.resetIn}. The dashboard
+                will resume normal operation once the limit resets.
+              </p>
             </div>
           ) : streaming ? (
             <div className="space-y-3">

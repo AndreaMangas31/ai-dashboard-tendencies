@@ -2,10 +2,19 @@ import { useState, useCallback } from "react";
 import { streamBriefing as apiStreamBriefing } from "@/lib/api";
 import { ParsedElement } from "@/lib/helpers/useMarkdownParser";
 
+export interface RateLimitInfo {
+  limit: number;
+  used: number;
+  requested: number;
+  remaining: number;
+  resetIn: string;
+}
+
 export interface UseStreamBriefingReturn {
   elements: ParsedElement[];
   streaming: boolean;
   error: string | null;
+  rateLimitInfo: RateLimitInfo | null;
   startStream: () => Promise<void>;
   reset: () => void;
 }
@@ -37,20 +46,27 @@ export function useStreamBriefing(): UseStreamBriefingReturn {
   const [elements, setElements] = useState<ParsedElement[]>([]);
   const [streaming, setStreaming] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [rateLimitInfo, setRateLimitInfo] = useState<RateLimitInfo | null>(
+    null,
+  );
 
   const startStream = useCallback(async () => {
     setStreaming(true);
     setElements([]);
     setError(null);
+    setRateLimitInfo(null);
 
     let jsonBuffer = "";
 
     try {
       // Solo acumular, NO intentar parsear en cada chunk
       for await (const chunk of apiStreamBriefing()) {
+        console.log("chunk received:", chunk);
         jsonBuffer += chunk;
       }
-
+      console.log(
+        `[FRONTEND] Stream completed, total buffer size: ${jsonBuffer} `,
+      );
       console.log(`[FRONTEND] Total: ${jsonBuffer.length} bytes`);
       console.log(`[FRONTEND] First 100: ${jsonBuffer.substring(0, 100)}`);
       console.log(
@@ -59,7 +75,20 @@ export function useStreamBriefing(): UseStreamBriefingReturn {
 
       // ÚNICO parseo: al final cuando todo está acumulado
       try {
-        const parsed = JSON.parse(jsonBuffer) as ParsedElement[];
+        const parsed = JSON.parse(jsonBuffer);
+        console.log(`[FRONTEND] Parsed JSON:`, parsed);
+
+        // Verificar si es error (con o sin rate limit info)
+        if (parsed.error) {
+          console.warn(`[FRONTEND] Error received: ${parsed.error}`);
+          setError(parsed.error);
+          if (parsed.rateLimitInfo) {
+            setRateLimitInfo(parsed.rateLimitInfo);
+          }
+          return;
+        }
+
+        // Si es array normal de elementos
         if (Array.isArray(parsed) && parsed.length > 0) {
           console.log(`[FRONTEND] ✓ JSON válido! ${parsed.length} elementos`);
           setElements(parsed);
@@ -92,7 +121,8 @@ export function useStreamBriefing(): UseStreamBriefingReturn {
     setElements([]);
     setStreaming(false);
     setError(null);
+    setRateLimitInfo(null);
   }, []);
 
-  return { elements, streaming, error, startStream, reset };
+  return { elements, streaming, error, rateLimitInfo, startStream, reset };
 }
