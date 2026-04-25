@@ -61,22 +61,11 @@ export function useStreamBriefing(): UseStreamBriefingReturn {
     try {
       // Solo acumular, NO intentar parsear en cada chunk
       for await (const chunk of apiStreamBriefing()) {
-        console.log("chunk received:", chunk);
         jsonBuffer += chunk;
       }
-      console.log(
-        `[FRONTEND] Stream completed, total buffer size: ${jsonBuffer} `,
-      );
-      console.log(`[FRONTEND] Total: ${jsonBuffer.length} bytes`);
-      console.log(`[FRONTEND] First 100: ${jsonBuffer.substring(0, 100)}`);
-      console.log(
-        `[FRONTEND] Last 100: ${jsonBuffer.substring(Math.max(0, jsonBuffer.length - 100))}`,
-      );
-
       // ÚNICO parseo: al final cuando todo está acumulado
       try {
         const parsed = JSON.parse(jsonBuffer);
-        console.log(`[FRONTEND] Parsed JSON:`, parsed);
 
         // Verificar si es error (con o sin rate limit info)
         if (parsed.error) {
@@ -90,15 +79,11 @@ export function useStreamBriefing(): UseStreamBriefingReturn {
 
         // Si es array normal de elementos
         if (Array.isArray(parsed) && parsed.length > 0) {
-          console.log(`[FRONTEND] ✓ JSON válido! ${parsed.length} elementos`);
           setElements(parsed);
         } else {
           throw new Error("Invalid JSON structure - empty or not array");
         }
       } catch (parseErr) {
-        console.error(`[FRONTEND] ✗ JSON parse error:`, parseErr);
-        console.error(`[FRONTEND] Buffer:`, jsonBuffer.substring(0, 300));
-
         // Fallback: si es markdown, convertir a elementos
         if (jsonBuffer.includes("###")) {
           console.warn("Received markdown, converting...");

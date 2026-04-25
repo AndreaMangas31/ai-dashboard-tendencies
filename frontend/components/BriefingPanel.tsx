@@ -197,6 +197,5 @@ export function BriefingPanel({ open, onClose }: BriefingPanelProps) {
 
 function BriefingContent({ elements }: { elements: ParsedElement[] }) {
   const { renderElements } = useMarkdownRenderer();
-  console.log("[DEBUG] Rendering briefing content with elements:", elements);
   return renderElements(elements);
 }

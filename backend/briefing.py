@@ -124,10 +124,6 @@ GENERATE NOW:"""
                 json_buffer += content
                 chunk_count += 1
 
-        print(f"[BACKEND] Chunks: {chunk_count}, Size: {len(json_buffer)}")
-        print(f"[BACKEND] First 150: {json_buffer[:150]}")
-        print(f"[BACKEND] Last 150: {json_buffer[-150:]}")
-
         # Limpiar JSON truncado si es necesario
         cleaned_json = clean_truncated_json(json_buffer)
         

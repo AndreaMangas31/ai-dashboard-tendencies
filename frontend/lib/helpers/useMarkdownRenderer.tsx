@@ -5,7 +5,6 @@ export function useMarkdownRenderer() {
   const renderElements = (elements: ParsedElement[]): React.ReactElement => {
     const result: React.ReactElement[] = [];
     let listItems: React.ReactElement[] = [];
-
     elements.forEach((element, index) => {
       const key = `${element.type}-${index}`;
 
@@ -38,7 +37,7 @@ export function useMarkdownRenderer() {
             break;
           case "h2":
             result.push(
-              <h2 key={key} className={element.className}>
+              <h2 key={key} className={element.className} style={element.style}>
                 {element.content}
               </h2>,
             );

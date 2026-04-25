@@ -103,7 +103,7 @@ async def get_briefing():
         if not topics:
             print(f"[ERROR] No topics available from scrapers. Aborting Groq request.")
             def error_generator():
-                error_response = json.dumps([{"type": "h1", "content": "Error: No trending topics available", "className": "text-lg font-bold text-red-500"}])
+                error_response = json.dumps([{"type": "h2", "content": "Error: No trending topics available", "className": "text-lg font-bold", "style": {"color": "#ff4500"}}])
                 yield f"data: {error_response}\n\n"
             return StreamingResponse(error_generator(), media_type="text/event-stream")
 
@@ -124,7 +124,7 @@ async def get_briefing():
     except Exception as e:
         print(f"Error in briefing endpoint: {e}")
         def error_generator():
-            error_response = json.dumps([{"type": "h1", "content": f"Error generating briefing", "className": "text-lg font-bold text-red-500"}])
+            error_response = json.dumps([{"type": "h2", "content": f"Error generating briefing", "className": "text-lg font-bold !text-reddit-red", "style": {"color": "#ff4500"}}])
             yield f"data: {error_response}\n\n"
 
         return StreamingResponse(error_generator(), media_type="text/event-stream")
