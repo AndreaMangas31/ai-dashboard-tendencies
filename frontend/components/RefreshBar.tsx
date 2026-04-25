@@ -58,14 +58,14 @@ export function RefreshBar({ fetchedAt, onRefresh, loading }: RefreshBarProps) {
   }
 
   return (
-    <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 flex items-center justify-between">
+    <div className="bg-tech-black-900 border border-tech-black-600 rounded-lg p-4 flex items-center justify-between">
       <div className="flex items-center gap-4">
-        <div>
+        <div className="flex flex-col">
           <p className="text-xs text-slate-500">Last updated</p>
           <p className="text-sm font-medium text-slate-300">{timeAgo}</p>
         </div>
 
-        <div className="w-px h-8 bg-slate-700" />
+        <div className="w-px h-8 bg-tech-black-700" />
 
         <div>
           <p className="text-xs text-slate-500">Next refresh in</p>
