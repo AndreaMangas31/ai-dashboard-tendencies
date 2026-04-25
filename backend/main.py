@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from scrapers.hackernews import fetch_hackernews_trends
 from scrapers.reddit import fetch_reddit_trends
-from scrapers.producthunt import fetch_producthunt_trends
+from scrapers.dev_community import fetch_dev_community_trends
 from briefing import stream_briefing
 
 # Cargar variables de entorno desde .env
@@ -52,19 +52,19 @@ async def get_trends() -> TrendsResponse:
         # Fetch from all sources concurrently
         hackernews_task = fetch_hackernews_trends()
         reddit_task = fetch_reddit_trends()
-        producthunt_task = fetch_producthunt_trends()
+        dev_community_task = fetch_dev_community_trends()
 
-        hackernews_items, reddit_items, producthunt_items = await asyncio.gather(
-            hackernews_task, reddit_task, producthunt_task, return_exceptions=True
+        hackernews_items, reddit_items, dev_community_items = await asyncio.gather(
+            hackernews_task, reddit_task, dev_community_task, return_exceptions=True
         )
 
         # Handle exceptions gracefully
         hackernews_items = hackernews_items if isinstance(hackernews_items, list) else []
         reddit_items = reddit_items if isinstance(reddit_items, list) else []
-        producthunt_items = producthunt_items if isinstance(producthunt_items, list) else []
+        dev_community_items = dev_community_items if isinstance(dev_community_items, list) else []
 
         # Combine and sort by score
-        all_items = hackernews_items + reddit_items + producthunt_items
+        all_items = hackernews_items + reddit_items + dev_community_items
         all_items.sort(key=lambda x: x["score"], reverse=True)
 
         items = [TrendItem(**item) for item in all_items[:100]]
@@ -82,39 +82,28 @@ async def get_briefing():
         # First, fetch all trends to get the topics
         hackernews_task = fetch_hackernews_trends()
         reddit_task = fetch_reddit_trends()
-        producthunt_task = fetch_producthunt_trends()
+        dev_community_task = fetch_dev_community_trends()
 
-        hackernews_items, reddit_items, producthunt_items = await asyncio.gather(
-            hackernews_task, reddit_task, producthunt_task, return_exceptions=True
+        hackernews_items, reddit_items, dev_community_items = await asyncio.gather(
+            hackernews_task, reddit_task, dev_community_task, return_exceptions=True
         )
 
         hackernews_items = hackernews_items if isinstance(hackernews_items, list) else []
         reddit_items = reddit_items if isinstance(reddit_items, list) else []
-        producthunt_items = producthunt_items if isinstance(producthunt_items, list) else []
+        dev_community_items = dev_community_items if isinstance(dev_community_items, list) else []
 
-        all_items = hackernews_items + reddit_items + producthunt_items
+        all_items = hackernews_items + reddit_items + dev_community_items
         all_items.sort(key=lambda x: x["score"], reverse=True)
 
         # Extract top 30 titles for the briefing
         topics = [item["title"] for item in all_items[:30]]
         
-        print(f"[DEBUG BRIEFING] Topics count: {len(topics)}")
-        print(f"[DEBUG BRIEFING] Hackernews items: {len(hackernews_items)}")
-        print(f"[DEBUG BRIEFING] Reddit items: {len(reddit_items)}")
-        print(f"[DEBUG BRIEFING] ProductHunt items: {len(producthunt_items)}")
         
         # Validar que hay tópicos antes de solicitar a Groq
         if not topics:
             print(f"[ERROR] No topics available from scrapers. Aborting Groq request.")
             def error_generator():
-                error_response = json.dumps({
-                    "error": "No trending topics available. Scrapers returned empty data.",
-                    "details": {
-                        "hackernews_items": len(hackernews_items),
-                        "reddit_items": len(reddit_items),
-                        "producthunt_items": len(producthunt_items),
-                    }
-                })
+                error_response = json.dumps([{"type": "h1", "content": "Error: No trending topics available", "className": "text-lg font-bold text-red-500"}])
                 yield f"data: {error_response}\n\n"
             return StreamingResponse(error_generator(), media_type="text/event-stream")
 
@@ -129,16 +118,14 @@ async def get_briefing():
                     yield f"data: {minified}\n\n"
                 except:
                     # Si no es JSON válido, enviar como está
-                    print(f"[DEBUG] Sending non-JSON WTF chunk: {chunk}")
-                    print(f"[DEBUG] Sending non-JSON chunk: {chunk[:100]}")
                     yield f"data: {chunk}\n\n"
 
         return StreamingResponse(generate(), media_type="text/event-stream")
     except Exception as e:
         print(f"Error in briefing endpoint: {e}")
-
         def error_generator():
-            yield f"data: Error generating briefing: {str(e)}\n\n"
+            error_response = json.dumps([{"type": "h1", "content": f"Error generating briefing", "className": "text-lg font-bold text-red-500"}])
+            yield f"data: {error_response}\n\n"
 
         return StreamingResponse(error_generator(), media_type="text/event-stream")
 

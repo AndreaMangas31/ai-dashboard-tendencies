@@ -3,9 +3,10 @@
 import { TrendItem } from "@/lib/api";
 import { TrendCard } from "./TrendCard";
 import { SkeletonLoader } from "./SkeletonLoader";
+import { Source } from "@/lib/api/types";
 
 interface SourceColumnProps {
-  source: "hackernews" | "reddit" | "producthunt";
+  source: Source;
   items: TrendItem[];
   loading: boolean;
   filter: string;
@@ -32,6 +33,12 @@ const SOURCE_INFO: Record<
     name: "Product Hunt",
     color: "text-ph-purple",
     bgColor: "bg-purple-900/20",
+  },
+  dev_community: {
+    icon: "💻",
+    name: "Dev Community",
+    color: "text-dev-blue",
+    bgColor: "bg-blue-900/20",
   },
 };
 

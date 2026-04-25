@@ -1,13 +1,15 @@
 export interface TrendItem {
   id: string;
-  source: 'hackernews' | 'reddit' | 'producthunt';
+  source: Source;
   title: string;
   url: string;
   score: number;
   comments: number;
-  category: 'ai' | 'web' | 'tools' | 'other';
+  category: Category;
   timestamp: string;
 }
+export type Source = "hackernews" | "reddit" | "producthunt" | "dev_community";
+export type Category = "all" | "ai" | "web" | "tools";
 
 export interface TrendsResponse {
   items: TrendItem[];

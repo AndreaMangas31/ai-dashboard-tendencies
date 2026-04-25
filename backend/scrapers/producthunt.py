@@ -46,9 +46,10 @@ async def fetch_producthunt_trends() -> List[dict]:
                     "Content-Type": "application/json",
                 },
             )
+            print(f"Product Hunt API status: {response}")  # Debug: print status code
 
             data = response.json()
-
+            print(f"Product Hunt API response: {data}")  # Debug: print API response
             if "errors" in data:
                 return []
 
