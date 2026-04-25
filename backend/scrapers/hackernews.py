@@ -12,6 +12,7 @@ async def fetch_hackernews_trends() -> List[dict]:
                 "https://hacker-news.firebaseio.com/v0/topstories.json"
             )
             story_ids = response.json()[:30]
+     
 
             # Fetch details for each story
             stories = []
@@ -21,8 +22,7 @@ async def fetch_hackernews_trends() -> List[dict]:
                         f"https://hacker-news.firebaseio.com/v0/item/{story_id}.json"
                     )
                     story = story_response.json()
-
-                    if story and story.get("deleted") is False:
+                    if story:
                         title: str = story.get("title", "")
                         url: str = story.get("url", "")
                         score: int = story.get("score", 0)

@@ -16,12 +16,12 @@ A real-time dashboard aggregating trending content from Hacker News, Reddit (r/p
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | Next.js 14 (App Router), React, TypeScript, Tailwind CSS |
-| **Backend** | FastAPI, Python 3.9+ |
-| **AI** | Groq (llama-3.3-70b-versatile, free tier) |
-| **APIs** | Hacker News (public), Reddit (public JSON), Product Hunt (GraphQL) |
+| Layer        | Technology                                                         |
+| ------------ | ------------------------------------------------------------------ |
+| **Frontend** | Next.js 14 (App Router), React, TypeScript, Tailwind CSS           |
+| **Backend**  | FastAPI, Python 3.9+                                               |
+| **AI**       | Groq (llama-3.3-70b-versatile, free tier)                          |
+| **APIs**     | Hacker News (public), Reddit (public JSON), Product Hunt (GraphQL) |
 
 ## Project Structure
 
@@ -85,24 +85,28 @@ venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
+uvicorn main:app --reload
 
 # Create .env file
 cp .env.example .env
 ```
 
 **Configure `.env`** with your API keys:
+
 ```env
 GROQ_API_KEY=your_groq_api_key_here
 PRODUCT_HUNT_API_KEY=your_product_hunt_key_here  # Optional
 ```
 
 Get your free Groq API key:
+
 1. Go to https://console.groq.com
 2. Sign up or log in
 3. Copy your API key
 4. Paste into `.env`
 
 **Run the backend:**
+
 ```bash
 python main.py
 ```
@@ -133,6 +137,7 @@ The dashboard will be available at `http://localhost:3000`
 Returns aggregated trending items from all sources.
 
 **Response:**
+
 ```json
 {
   "items": [
@@ -158,6 +163,7 @@ Streams AI-generated executive briefing as Server-Sent Events.
 Each event contains a `data:` chunk of the briefing text. The frontend collects these chunks to display streaming content.
 
 **Example event stream:**
+
 ```
 data: You are a senior tech analyst.
 data:  Based on these trending topics
@@ -172,28 +178,30 @@ Simple health check endpoint.
 
 ### Backend Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `GROQ_API_KEY` | Groq API key for AI briefing | Yes |
-| `PRODUCT_HUNT_API_KEY` | Product Hunt GraphQL key | No* |
+| Variable               | Description                  | Required |
+| ---------------------- | ---------------------------- | -------- |
+| `GROQ_API_KEY`         | Groq API key for AI briefing | Yes      |
+| `PRODUCT_HUNT_API_KEY` | Product Hunt GraphQL key     | No\*     |
 
-\* *If missing, Product Hunt section will be empty but dashboard continues working*
+\* _If missing, Product Hunt section will be empty but dashboard continues working_
 
 ### Frontend Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
+| Variable              | Description     | Default                 |
+| --------------------- | --------------- | ----------------------- |
 | `NEXT_PUBLIC_API_URL` | Backend API URL | `http://localhost:8000` |
 
 ## Running in Production
 
 ### Backend
+
 ```bash
 cd backend
 python -m uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
 ```
 
 ### Frontend
+
 ```bash
 cd frontend
 npm run build
@@ -217,6 +225,7 @@ Update `NEXT_PUBLIC_API_URL` to your backend domain.
 ### Categorization Logic
 
 Auto-categories are inferred from title + URL/topics:
+
 - **AI**: "ai", "llm", "gpt", "claude", "transformer", "machine learning"
 - **Web**: "javascript", "react", "typescript", "nextjs", "frontend"
 - **Tools**: "tool", "cli", "library", "framework", "open source"
@@ -249,6 +258,7 @@ Auto-categories are inferred from title + URL/topics:
 ### Adding a new data source
 
 1. **Create scraper** in `backend/scrapers/newsource.py`
+
    ```python
    async def fetch_newsource_trends() -> list[dict]:
        # Return list of trend dicts with schema below
@@ -265,9 +275,10 @@ Auto-categories are inferred from title + URL/topics:
    ```
 
 2. **Add to main.py**
+
    ```python
    from scrapers.newsource import fetch_newsource_trends
-   
+
    in get_trends():
        newsource_items = await fetch_newsource_trends()
    ```
@@ -277,13 +288,18 @@ Auto-categories are inferred from title + URL/topics:
 ### Common customizations
 
 **Change refresh interval** (`frontend/app/page.tsx`):
+
 ```tsx
-const interval = setInterval(() => {
-  loadTrends();
-}, 10 * 60 * 1000); // 10 minutes instead of 5
+const interval = setInterval(
+  () => {
+    loadTrends();
+  },
+  10 * 60 * 1000,
+); // 10 minutes instead of 5
 ```
 
 **Change Groq model** (`backend/briefing.py`):
+
 ```python
 client.messages.stream(
     model="mixtral-8x7b-32768",  # Alternative Groq model
@@ -303,6 +319,7 @@ For higher usage, upgrade to Groq Pro: https://console.groq.com/keys
 ## Troubleshooting
 
 ### Backend won't start
+
 ```bash
 # Check if port 8000 is in use
 lsof -i :8000
@@ -313,6 +330,7 @@ python --version  # Should be 3.9+
 ```
 
 ### Frontend shows "API connection failed"
+
 ```bash
 # Verify backend is running
 curl http://localhost:8000/health
@@ -322,6 +340,7 @@ curl http://localhost:8000/health
 ```
 
 ### Groq API returns 429 (rate limit)
+
 ```
 - Wait 60 seconds
 - You've hit the free tier rate limit
@@ -329,6 +348,7 @@ curl http://localhost:8000/health
 ```
 
 ### Empty Product Hunt section
+
 ```
 - Product Hunt API key is optional
 - Only missing if you haven't set PRODUCT_HUNT_API_KEY
