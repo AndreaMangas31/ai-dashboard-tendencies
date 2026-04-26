@@ -63,7 +63,9 @@ export function RefreshBar({ fetchedAt, onRefresh, loading }: RefreshBarProps) {
       <div className="flex items-center gap-4">
         <div className="flex flex-col">
           <p className="text-xs text-slate-500">Last updated</p>
-          <p className="text-sm font-medium text-slate-300">{timeAgo}</p>
+          <p className="text-sm font-medium text-slate-300">
+            {timeAgo ? timeAgo : "..."}
+          </p>
         </div>
 
         <div className="w-px h-8 bg-tech-black-700" />
