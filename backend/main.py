@@ -17,7 +17,7 @@ from briefing import stream_briefing
 load_dotenv()
 
 
-app = FastAPI(title="Tech Pulse API")
+app = FastAPI(title="IntelliTrends API")
 
 # CORS configuration
 app.add_middleware(

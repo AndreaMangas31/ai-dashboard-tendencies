@@ -11,6 +11,7 @@ module.exports = {
         "hn-orange": "#ff6600",
         "reddit-red": "#ff4500",
         "ph-purple": "#da552f",
+        card: "#15181dbd",
         "tech-black": {
           50: "#f5f7fa",
           100: "#e4e9f0",

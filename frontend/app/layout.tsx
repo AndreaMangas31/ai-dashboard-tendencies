@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Tech Pulse - Daily Tech Trends Dashboard",
+  title: "IntelliTrends - Daily Tech Trends Dashboard",
   description:
     "Aggregated trending content from Hacker News, Reddit, and Product Hunt with AI-powered briefing",
   //Add font links

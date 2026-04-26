@@ -1,8 +1,8 @@
-# Tech Pulse Dashboard
+# IntelliTrends Dashboard
 
 A real-time dashboard aggregating trending content from Hacker News, Reddit (r/programming, r/technology), and Product Hunt with AI-powered briefing using Groq.
 
-![Tech Pulse](https://img.shields.io/badge/Next.js%2014-black?logo=next.js) ![FastAPI](https://img.shields.io/badge/FastAPI-009687?logo=fastapi) ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-38B2AC?logo=tailwind-css) ![Groq AI](https://img.shields.io/badge/Groq%20AI-orange)
+![IntelliTrends](https://img.shields.io/badge/Next.js%2014-black?logo=next.js) ![FastAPI](https://img.shields.io/badge/FastAPI-009687?logo=fastapi) ![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-38B2AC?logo=tailwind-css) ![Groq AI](https://img.shields.io/badge/Groq%20AI-orange)
 
 ## Features
 

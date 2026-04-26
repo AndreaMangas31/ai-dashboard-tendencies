@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPause, faPlay, faSync } from "@fortawesome/free-solid-svg-icons";
+import { CustomButton } from "../CustomButton";
 
 interface RefreshBarProps {
   fetchedAt: string | null;
@@ -77,47 +78,38 @@ export function RefreshBar({ fetchedAt, onRefresh, loading }: RefreshBarProps) {
         </div>
       </div>
 
-      <div id="action-buttons" className="flex flex-row items-center gap-6">
-        <button
+      <div id="action-buttons" className="flex flex-row items-center gap-2">
+        <CustomButton
           id="pause-button"
+          variant="ghost"
           onClick={togglePause}
-          className="text-slate-400 hover:text-slate-200 transition-colors"
-        >
-          <span className="flex items-center gap-2">
+          className=" transition-colors"
+          icon={
             <FontAwesomeIcon
               icon={!isPaused ? faPause : faPlay}
               className="w-4 h-4 "
             />
-            {isPaused ? "Resume" : "Pause"}
-          </span>
-        </button>
+          }
+        >
+          {!isPaused ? "Pause" : "Resume"}
+        </CustomButton>
 
-        <button
-          id="refresh-button"
+        <CustomButton
+          variant="secondary"
           onClick={onRefresh}
           disabled={loading}
-          className={`
-          px-4 py-2 rounded-lg font-medium text-sm
-          transition-all duration-200
-          ${
-            loading
-              ? "bg-slate-700 text-slate-400 cursor-not-allowed"
-              : "bg-blue-600 text-white hover:bg-blue-700 active:scale-95"
-          }
+          className={`transition-all duration-200
+          ${loading ? " cursor-not-allowed" : "active:scale-95"}
         `}
+          icon={
+            <FontAwesomeIcon
+              icon={faSync}
+              className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+            />
+          }
         >
-          {loading ? (
-            <span className="flex items-center gap-2">
-              <FontAwesomeIcon icon={faSync} className="w-4 h-4 animate-spin" />
-              Refreshing
-            </span>
-          ) : (
-            <span className="flex items-center gap-2">
-              <FontAwesomeIcon icon={faSync} className="w-4 h-4" />
-              Refresh
-            </span>
-          )}
-        </button>
+          {loading ? "Refreshing..." : "Refresh"}
+        </CustomButton>
       </div>
     </div>
   );

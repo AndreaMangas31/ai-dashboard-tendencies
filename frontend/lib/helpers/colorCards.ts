@@ -2,13 +2,14 @@ export const SOURCE_BORDER_COLORS: Record<string, string> = {
   hackernews: "border-hn-orange/80",
   reddit: "border-reddit-red/80",
   producthunt: "border-ph-purple/80",
+  dev_community: "border-black/80",
 };
 
 export const CATEGORY_COLORS: Record<string, string> = {
-  ai: "bg-blue-900 text-blue-100",
-  web: "bg-green-900 text-green-100",
-  tools: "bg-indigo-900 text-indigo-100",
-  other: "bg-slate-700 text-slate-100",
+  ai: "bg-purple-700 text-white",
+  web: "bg-blue-500 text-white",
+  tools: "bg-orange-700 text-white",
+  other: "bg-slate-700 text-white",
 };
 
 export const SOURCE_CLASS: Record<

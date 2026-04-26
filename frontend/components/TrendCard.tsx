@@ -1,7 +1,10 @@
 "use client";
 
 import { TrendItem } from "@/lib/api";
-import { CATEGORY_COLORS, SOURCE_BORDER_COLORS } from "@/lib/helpers/colorCards";
+import {
+  CATEGORY_COLORS,
+  SOURCE_BORDER_COLORS,
+} from "@/lib/helpers/colorCards";
 
 interface TrendCardProps {
   item: TrendItem;
@@ -19,7 +22,7 @@ export function TrendCard({ item }: TrendCardProps) {
       rel="noopener noreferrer"
       className={`
         block p-4 rounded-lg border-l-4 ${borderColor} 
-        bg-slate-800 hover:bg-slate-700 
+        bg-card hover:bg-purple-600/40
         transition-all duration-200 hover:shadow-lg hover:-translate-y-1 cursor-pointer
         animate-fade-in
       `}

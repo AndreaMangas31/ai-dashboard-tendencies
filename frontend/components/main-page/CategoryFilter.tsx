@@ -1,4 +1,4 @@
-import { Category } from "@/lib/api/types";
+import { Category, CategoryLabels } from "@/lib/api/types";
 import React from "react";
 
 interface CategoryFilterProps {
@@ -12,7 +12,7 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
 }) => {
   return (
     <div className="flex gap-2 overflow-x-auto pb-2">
-      {(["all", "ai", "web", "tools"] as Category[]).map((category) => (
+      {(Object.keys(CategoryLabels) as Category[]).map((category) => (
         <button
           key={category}
           onClick={() => setSelectedCategory(category)}
@@ -21,8 +21,8 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
                 transition-all duration-200
                 ${
                   selectedCategory === category
-                    ? "bg-blue-600 text-white"
-                    : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                    ? "bg-purple-500 text-white"
+                    : "bg-tech-black-700 text-slate-300 hover:bg-purple-500/50"
                 }
               `}
         >

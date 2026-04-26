@@ -28,8 +28,9 @@ export function SourceColumn({
   return (
     <div className="flex flex-col gap-4 h-full min-h-screen md:min-h-[calc(100vh-120px)]">
       {/* Header */}
+      {/* ${info.bgColor} */}
       <div
-        className={`sticky top-0 z-10 ${info.bgColor} flex flex-row  items-center justify-between px-4 py-4 rounded-lg  border border-slate-700`}
+        className={`sticky top-0 z-10  flex bg-tech-black-950 flex-row  items-center justify-between px-4 py-4 rounded-lg  border border-slate-700`}
       >
         <div className="flex items-center gap-2 ">
           <img
