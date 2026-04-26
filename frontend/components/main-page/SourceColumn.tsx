@@ -1,8 +1,8 @@
 "use client";
 
 import { TrendItem } from "@/lib/api";
-import { TrendCard } from "./TrendCard";
-import { SkeletonLoader } from "./SkeletonLoader";
+import { TrendCard } from "../TrendCard";
+import { SkeletonLoader } from "../SkeletonLoader";
 import { Source } from "@/lib/api/types";
 
 interface SourceColumnProps {

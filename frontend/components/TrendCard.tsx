@@ -1,27 +1,15 @@
-'use client';
+"use client";
 
-import { TrendItem } from '@/lib/api';
+import { TrendItem } from "@/lib/api";
+import { CATEGORY_COLORS, SOURCE_COLORS } from "@/lib/helpers/colorCards";
 
 interface TrendCardProps {
   item: TrendItem;
 }
 
-const SOURCE_COLORS: Record<string, string> = {
-  hackernews: 'border-hn-orange',
-  reddit: 'border-reddit-red',
-  producthunt: 'border-ph-purple',
-};
-
-const CATEGORY_COLORS: Record<string, string> = {
-  ai: 'bg-blue-900 text-blue-100',
-  web: 'bg-green-900 text-green-100',
-  tools: 'bg-indigo-900 text-indigo-100',
-  other: 'bg-slate-700 text-slate-100',
-};
-
 export function TrendCard({ item }: TrendCardProps) {
   const relativeTime = getRelativeTime(item.timestamp);
-  const borderColor = SOURCE_COLORS[item.source] || 'border-slate-600';
+  const borderColor = SOURCE_COLORS[item.source] || "border-slate-600";
   const categoryColor = CATEGORY_COLORS[item.category];
 
   return (
@@ -44,7 +32,9 @@ export function TrendCard({ item }: TrendCardProps) {
 
         {/* Category and Time badges */}
         <div className="flex items-center justify-between gap-2">
-          <span className={`text-xs px-2 py-1 rounded-full ${categoryColor} font-medium`}>
+          <span
+            className={`text-xs px-2 py-1 rounded-full ${categoryColor} font-medium`}
+          >
             {item.category}
           </span>
           <span className="text-xs text-slate-400">{relativeTime}</span>
@@ -78,7 +68,7 @@ function getRelativeTime(timestamp: string): string {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return 'now';
+  if (diffMins < 1) return "now";
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;

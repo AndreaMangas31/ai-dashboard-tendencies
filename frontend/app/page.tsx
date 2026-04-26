@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import { TrendItem } from "@/lib/api";
 import { useFetchTrends } from "@/hooks/useFetchTrends";
-import { SourceColumn } from "@/components/SourceColumn";
-import { BriefingPanel } from "@/components/BriefingPanel";
-import { RefreshBar } from "@/components/RefreshBar";
-import { Header } from "@/components/Header";
+import { SourceColumn } from "@/components/main-page/SourceColumn";
+import { BriefingPanel } from "@/components/briefing/BriefingPanel";
+import { RefreshBar } from "@/components/main-page/RefreshBar";
+import { Header } from "@/components/main-page/Header";
 import { Category, Source } from "@/lib/api/types";
-import { CategoryFilter } from "@/components/CategoryFilter";
+import { CategoryFilter } from "@/components/main-page/CategoryFilter";
 
 export default function Home() {
   const {
