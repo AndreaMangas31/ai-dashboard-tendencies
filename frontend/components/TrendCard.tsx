@@ -1,7 +1,7 @@
 "use client";
 
 import { TrendItem } from "@/lib/api";
-import { CATEGORY_COLORS, SOURCE_COLORS } from "@/lib/helpers/colorCards";
+import { CATEGORY_COLORS, SOURCE_BORDER_COLORS } from "@/lib/helpers/colorCards";
 
 interface TrendCardProps {
   item: TrendItem;
@@ -9,7 +9,7 @@ interface TrendCardProps {
 
 export function TrendCard({ item }: TrendCardProps) {
   const relativeTime = getRelativeTime(item.timestamp);
-  const borderColor = SOURCE_COLORS[item.source] || "border-slate-600";
+  const borderColor = SOURCE_BORDER_COLORS[item.source] || "border-slate-600";
   const categoryColor = CATEGORY_COLORS[item.category];
 
   return (

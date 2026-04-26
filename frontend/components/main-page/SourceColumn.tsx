@@ -4,6 +4,9 @@ import { TrendItem } from "@/lib/api";
 import { TrendCard } from "../TrendCard";
 import { SkeletonLoader } from "../SkeletonLoader";
 import { Source } from "@/lib/api/types";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { SOURCE_CLASS } from "@/lib/helpers/colorCards";
 
 interface SourceColumnProps {
   source: Source;
@@ -12,59 +15,38 @@ interface SourceColumnProps {
   filter: string;
 }
 
-const SOURCE_INFO: Record<
-  string,
-  { icon: string; name: string; color: string; bgColor: string }
-> = {
-  hackernews: {
-    icon: "⬆️",
-    name: "Hacker News",
-    color: "text-hn-orange",
-    bgColor: "bg-orange-900/20",
-  },
-  reddit: {
-    icon: "🔗",
-    name: "Reddit",
-    color: "text-reddit-red",
-    bgColor: "bg-red-900/20",
-  },
-  producthunt: {
-    icon: "🎯",
-    name: "Product Hunt",
-    color: "text-ph-purple",
-    bgColor: "bg-purple-900/20",
-  },
-  dev_community: {
-    icon: "💻",
-    name: "Dev Community",
-    color: "text-dev-blue",
-    bgColor: "bg-blue-900/20",
-  },
-};
-
 export function SourceColumn({
   source,
   items,
   loading,
   filter,
 }: SourceColumnProps) {
-  const info = SOURCE_INFO[source];
+  const info = SOURCE_CLASS[source];
   const filteredItems =
     filter === "all" ? items : items.filter((item) => item.category === filter);
 
   return (
-    <div className="flex flex-col h-full min-h-screen md:min-h-[calc(100vh-120px)]">
+    <div className="flex flex-col gap-4 h-full min-h-screen md:min-h-[calc(100vh-120px)]">
       {/* Header */}
       <div
-        className={`sticky top-0 z-10 ${info.bgColor} px-4 py-4 rounded-lg mb-4 border border-slate-700`}
+        className={`sticky top-0 z-10 ${info.bgColor} flex flex-row  items-center justify-between px-4 py-4 rounded-lg  border border-slate-700`}
       >
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-2xl">{info.icon}</span>
+        <div className="flex items-center gap-2 ">
+          <img
+            src={info.icon}
+            alt={info.name}
+            className="w-8 h-8 border rounded-md bg-white"
+          />
           <h2 className={`font-bold text-lg ${info.color}`}>{info.name}</h2>
         </div>
-        <p className="text-sm text-slate-400">
-          {loading ? "Loading..." : `${filteredItems.length} trending`}
-        </p>
+        {loading ? (
+          <FontAwesomeIcon
+            icon={faSpinner}
+            className={`w-4 h-4 text-white animate-spin`}
+          />
+        ) : (
+          <p className="text-sm text-white">{filteredItems.length} trending</p>
+        )}
       </div>
 
       {/* Items */}
