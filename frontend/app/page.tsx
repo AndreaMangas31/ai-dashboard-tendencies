@@ -36,8 +36,8 @@ export default function Home() {
 
   const hackernewsItems = trends.filter((item) => item.source === "hackernews");
   const redditItems = trends.filter((item) => item.source === "reddit");
-  const devCommunityItems = trends.filter(
-    (item) => item.source === "dev_community",
+  const productHuntItems = trends.filter(
+    (item) => item.source === "producthunt",
   );
 
   return (
@@ -134,8 +134,8 @@ export default function Home() {
             filter={selectedCategory}
           />
           <SourceColumn
-            source="dev_community"
-            items={devCommunityItems}
+            source="producthunt"
+            items={productHuntItems}
             loading={loading}
             filter={selectedCategory}
           />
