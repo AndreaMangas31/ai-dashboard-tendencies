@@ -2,7 +2,7 @@ import {
   fetchDevCommunity,
   fetchHackerNews,
   fetchReddit,
-} from "../trends/route";
+} from "@/lib/api/fetchTrendSources";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
