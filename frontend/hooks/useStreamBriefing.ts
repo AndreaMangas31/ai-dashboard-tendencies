@@ -62,6 +62,15 @@ export function useStreamBriefing(): UseStreamBriefingReturn {
       // Solo acumular, NO intentar parsear en cada chunk
       for await (const chunk of apiStreamBriefing()) {
         jsonBuffer += chunk;
+        try {
+          const parsed = JSON.parse(chunk);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setElements(parsed);
+            jsonBuffer = chunk;
+          }
+        } catch {
+          // wait until the stream finishes
+        }
       }
       // ÚNICO parseo: al final cuando todo está acumulado
       try {

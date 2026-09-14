@@ -121,6 +121,8 @@ export function BriefingPanel({ open, onClose }: BriefingPanelProps) {
                 will resume normal operation once the limit resets.
               </p>
             </div>
+          ) : error ? (
+            <p className="text-red-400 text-sm">{error}</p>
           ) : streaming ? (
             <div className="space-y-3">
               <div className="flex items-center gap-2">

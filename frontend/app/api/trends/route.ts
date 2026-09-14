@@ -39,7 +39,7 @@ function htmlUnescape(value: string): string {
     .replace(/&#39;/g, "'");
 }
 
-async function fetchHackerNews(): Promise<TrendItem[]> {
+export async function fetchHackerNews(): Promise<TrendItem[]> {
   try {
     const res = await fetch(
       "https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=20",
@@ -77,7 +77,7 @@ async function fetchHackerNews(): Promise<TrendItem[]> {
   }
 }
 
-async function fetchReddit(): Promise<TrendItem[]> {
+export async function fetchReddit(): Promise<TrendItem[]> {
   try {
     const res = await fetch("https://www.reddit.com/r/programming+technology/.rss", {
       headers: {
@@ -119,7 +119,7 @@ async function fetchReddit(): Promise<TrendItem[]> {
   }
 }
 
-async function fetchDevCommunity(): Promise<TrendItem[]> {
+export async function fetchDevCommunity(): Promise<TrendItem[]> {
   try {
     const res = await fetch("https://dev.to/api/articles?per_page=30&sort_by=hot", {
       headers: { "User-Agent": "TechPulseDashboard/1.0" },

@@ -40,11 +40,11 @@ export async function* fetchSSE(
 ): AsyncGenerator<string> {
   try {
     const response = await fetch(url, {
+      ...options,
       headers: {
-        "Content-Type": ContentType.SSE,
+        Accept: ContentType.SSE,
         ...options?.headers,
       },
-      ...options,
     });
 
     if (!response.ok) {
@@ -67,8 +67,9 @@ export async function* fetchSSE(
       const lines = chunk.split("\n");
 
       for (const line of lines) {
-        if (line.startsWith("data: ")) {
-          const data = line.slice(6);
+        const trimmed = line.trim();
+        if (trimmed.startsWith("data:")) {
+          const data = trimmed.slice(5).trim();
           if (data) {
             yield data;
           }
