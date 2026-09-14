@@ -28,3 +28,4 @@ frontend/generated/
 # System
 .env
 .env.local
+.vercel/

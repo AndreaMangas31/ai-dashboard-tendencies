@@ -9,7 +9,15 @@ export interface TrendItem {
   timestamp: string;
 }
 export type Source = "hackernews" | "reddit" | "producthunt" | "dev_community";
-export type Category = "all" | "ai" | "web" | "tools";
+
+export const CategoryLabels = {
+  all: { label: "All" },
+  ai: { label: "AI" },
+  web: { label: "Web" },
+  tools: { label: "Tools" },
+} as const;
+
+export type Category = keyof typeof CategoryLabels;
 
 export interface TrendsResponse {
   items: TrendItem[];

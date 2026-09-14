@@ -1,54 +1,47 @@
+import asyncio
 import httpx
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 
 async def fetch_hackernews_trends() -> List[dict]:
     """Fetch top stories from Hacker News."""
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            # Get top 30 story IDs
+        async with httpx.AsyncClient(timeout=8.0) as client:
             response = await client.get(
                 "https://hacker-news.firebaseio.com/v0/topstories.json"
             )
-            story_ids = response.json()[:30]
-     
-
-            # Fetch details for each story
-            stories = []
-            for story_id in story_ids:
-                try:
-                    story_response = await client.get(
-                        f"https://hacker-news.firebaseio.com/v0/item/{story_id}.json"
-                    )
-                    story = story_response.json()
-                    if story:
-                        title: str = story.get("title", "")
-                        url: str = story.get("url", "")
-                        score: int = story.get("score", 0)
-                        descendants: int = story.get("descendants", 0)
-                        time: int = story.get("time", 0)
-
-                        category = categorize_hackernews(title, url)
-
-                        stories.append(
-                            {
-                                "id": f"hn-{story_id}",
-                                "source": "hackernews",
-                                "title": title,
-                                "url": url or f"https://news.ycombinator.com/item?id={story_id}",
-                                "score": score,
-                                "comments": descendants,
-                                "category": category,
-                                "timestamp": datetime.fromtimestamp(time).isoformat(),
-                            }
-                        )
-                except Exception:
-                    continue
-
-            return stories
+            story_ids = response.json()[:20]
+            stories = await asyncio.gather(
+                *[fetch_hackernews_story(client, story_id) for story_id in story_ids]
+            )
+            return [story for story in stories if story]
     except Exception:
         return []
+
+
+async def fetch_hackernews_story(client: httpx.AsyncClient, story_id: int) -> Optional[dict]:
+    try:
+        story_response = await client.get(
+            f"https://hacker-news.firebaseio.com/v0/item/{story_id}.json"
+        )
+        story = story_response.json()
+        if not story:
+            return None
+        title: str = story.get("title", "")
+        url: str = story.get("url", "")
+        return {
+            "id": f"hn-{story_id}",
+            "source": "hackernews",
+            "title": title,
+            "url": url or f"https://news.ycombinator.com/item?id={story_id}",
+            "score": story.get("score", 0),
+            "comments": story.get("descendants", 0),
+            "category": categorize_hackernews(title, url),
+            "timestamp": datetime.fromtimestamp(story.get("time", 0)).isoformat(),
+        }
+    except Exception:
+        return None
 
 
 def categorize_hackernews(title: str, url: str) -> str:
