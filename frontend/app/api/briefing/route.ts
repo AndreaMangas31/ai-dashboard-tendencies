@@ -30,13 +30,24 @@ function errorPayload(content: string) {
 
 function extractJsonArray(raw: string): unknown {
   const trimmed = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  const tryParse = (value: string) => {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed;
+    if (Array.isArray(parsed?.elements)) return parsed.elements;
+    throw new Error("JSON was not an array");
+  };
   try {
-    return JSON.parse(trimmed);
+    return tryParse(trimmed);
   } catch {
-    const start = trimmed.indexOf("[");
-    const end = trimmed.lastIndexOf("]");
-    if (start >= 0 && end > start) {
-      return JSON.parse(trimmed.slice(start, end + 1));
+    const arrayStart = trimmed.indexOf("[");
+    const arrayEnd = trimmed.lastIndexOf("]");
+    if (arrayStart >= 0 && arrayEnd > arrayStart) {
+      return tryParse(trimmed.slice(arrayStart, arrayEnd + 1));
+    }
+    const objectStart = trimmed.indexOf("{");
+    const objectEnd = trimmed.lastIndexOf("}");
+    if (objectStart >= 0 && objectEnd > objectStart) {
+      return tryParse(trimmed.slice(objectStart, objectEnd + 1));
     }
     throw new Error("Model did not return JSON");
   }
@@ -70,9 +81,9 @@ export async function GET(request: Request) {
     }
 
     const topicsText = topics.map((topic) => `- ${topic}`).join("\n");
-    const prompt = `JSON ARRAY.
+    const prompt = `Return ONLY a JSON object with key "elements" (an array).
 
-Structure:
+Structure of elements:
 - h1: "Tech Industry Briefing"
 - h2: sectors (AI, Video Games, Economics, Infrastructure, etc.)
 - Each sector: 1 descriptive p + EXACTLY 2 li
@@ -81,15 +92,13 @@ Structure:
 Topics:
 ${topicsText}
 
-FORMAT EXAMPLE (JSON):
-[{"type":"h1","content":"Tech Industry Briefing","className":"text-lg font-bold"},{"type":"h2","content":"AI & Machine Learning","className":"text-base font-bold"},{"type":"p","content":"AI is rapidly evolving with strong commercial adoption.","className":"text-sm"},{"type":"li","content":"OpenAI launches a new model improving reasoning","className":"text-sm"},{"type":"li","content":"DeepMind advances scientific discovery tools","className":"text-sm"},{"type":"h2","content":"Where to Invest","className":"text-base font-bold"},{"type":"p","content":"Focus on AI infrastructure and scalable software","className":"text-sm"}]
+FORMAT:
+{"elements":[{"type":"h1","content":"Tech Industry Briefing","className":"text-lg font-bold"},{"type":"h2","content":"AI & Machine Learning","className":"text-base font-bold"},{"type":"p","content":"AI is rapidly evolving with strong commercial adoption.","className":"text-sm"},{"type":"li","content":"OpenAI launches a new model improving reasoning","className":"text-sm"},{"type":"li","content":"DeepMind advances scientific discovery tools","className":"text-sm"},{"type":"h2","content":"Where to Invest","className":"text-base font-bold"},{"type":"p","content":"Focus on AI infrastructure and scalable software","className":"text-sm"}]}
 
-IMPORTANT RULES:
-- RESPOND ONLY WITH VALID JSON ARRAY
-- Each p MUST give context or trend
-- ALWAYS 2 li per sector
-- NO markdown, NO explanations
-- NO text before/after JSON`;
+RULES:
+- Valid JSON object only
+- Each p must give context
+- ALWAYS 2 li per sector`;
 
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -101,8 +110,10 @@ IMPORTANT RULES:
         model: "openai/gpt-oss-20b",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7,
-        max_tokens: 800,
+        max_tokens: 1800,
         stream: false,
+        include_reasoning: false,
+        response_format: { type: "json_object" },
       }),
     });
 
@@ -118,9 +129,10 @@ IMPORTANT RULES:
     }
 
     const groqJson = (await groqRes.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
+      choices?: Array<{ message?: { content?: string; reasoning?: string } }>;
     };
-    const content = groqJson.choices?.[0]?.message?.content ?? "";
+    const message = groqJson.choices?.[0]?.message ?? {};
+    const content = `${message.content ?? ""}\n${message.reasoning ?? ""}`;
     const parsed = extractJsonArray(content);
     if (!Array.isArray(parsed) || parsed.length === 0) {
       return sseResponse(errorPayload("The briefing model returned empty content."));
