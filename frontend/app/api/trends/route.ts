@@ -27,63 +27,130 @@ function categorize(text: string): Category {
   return "other";
 }
 
+function htmlUnescape(value: string): string {
+  return value
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
 async function fetchHackerNews(): Promise<TrendItem[]> {
   try {
-    const idsRes = await fetch("https://hacker-news.firebaseio.com/v0/topstories.json", {
-      next: { revalidate: 300 },
-    });
-    const ids: number[] = (await idsRes.json()).slice(0, 20);
-    const stories = await Promise.all(
-      ids.map(async (id) => {
-        const res = await fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`, {
-          next: { revalidate: 300 },
-        });
-        return res.json();
-      }),
+    const res = await fetch(
+      "https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=20",
+      { next: { revalidate: 300 } },
     );
-    return stories.filter(Boolean).map((story) => ({
-      id: `hn-${story.id}`,
-      source: "hackernews",
-      title: story.title ?? "",
-      url: story.url || `https://news.ycombinator.com/item?id=${story.id}`,
-      score: story.score ?? 0,
-      comments: story.descendants ?? 0,
-      category: categorize(`${story.title ?? ""} ${story.url ?? ""}`),
-      timestamp: new Date((story.time ?? 0) * 1000).toISOString(),
-    }));
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data?.hits ?? [])
+      .filter((hit: { title?: string; objectID?: string }) => hit?.title && hit?.objectID)
+      .map(
+        (hit: {
+          objectID: string;
+          title?: string;
+          url?: string;
+          points?: number;
+          num_comments?: number;
+          created_at?: string;
+        }) => {
+          const title = hit.title ?? "";
+          const url = hit.url || `https://news.ycombinator.com/item?id=${hit.objectID}`;
+          return {
+            id: `hn-${hit.objectID}`,
+            source: "hackernews" as const,
+            title,
+            url,
+            score: hit.points ?? 0,
+            comments: hit.num_comments ?? 0,
+            category: categorize(`${title} ${url}`),
+            timestamp: hit.created_at ?? new Date().toISOString(),
+          };
+        },
+      );
   } catch {
     return [];
   }
 }
 
 async function fetchReddit(): Promise<TrendItem[]> {
-  const posts: TrendItem[] = [];
-  for (const subreddit of ["programming", "technology"]) {
-    try {
-      const res = await fetch(`https://www.reddit.com/r/${subreddit}/hot.json?limit=15`, {
-        headers: { "User-Agent": "TechPulseDashboard/1.0" },
-        next: { revalidate: 300 },
+  try {
+    const res = await fetch("https://www.reddit.com/r/programming+technology/.rss", {
+      headers: {
+        "User-Agent": "TechPulseDashboard/1.0 (news-aggregator)",
+        Accept: "application/atom+xml, application/rss+xml, application/xml, text/xml",
+      },
+      next: { revalidate: 300 },
+    });
+    if (!res.ok) return [];
+    const xml = await res.text();
+    const entries = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)].slice(0, 30);
+    const posts: TrendItem[] = [];
+    for (const match of entries) {
+      const block = match[1];
+      const titleMatch = block.match(/<title>(?:<!\[CDATA\[(.*?)\]\]>|(.*?))<\/title>/);
+      const title = htmlUnescape((titleMatch?.[1] || titleMatch?.[2] || "").trim());
+      if (!title || title.toLowerCase().startsWith("announcement")) continue;
+      const atomId = block.match(/<id>(.*?)<\/id>/)?.[1] ?? "";
+      const postId = atomId.replace("t3_", "");
+      const commentsUrl = block.match(/<link href="([^"]+)"/)?.[1] ?? "";
+      const externalUrl = htmlUnescape(block.match(/<a href="([^"]+)">\[link\]<\/a>/i)?.[1] ?? "");
+      const url = externalUrl || commentsUrl;
+      const date = block.match(/<updated>(.*?)<\/updated>/)?.[1];
+      if (!postId || !url) continue;
+      posts.push({
+        id: `reddit-${postId}`,
+        source: "reddit",
+        title,
+        url,
+        score: 0,
+        comments: 0,
+        category: categorize(title),
+        timestamp: date ?? new Date().toISOString(),
       });
-      const data = await res.json();
-      for (const item of data?.data?.children ?? []) {
-        const post = item.data;
-        if (post?.stickied || post?.is_self) continue;
-        posts.push({
-          id: `reddit-${post.id}`,
-          source: "reddit",
-          title: post.title ?? "",
-          url: post.url ?? "",
-          score: post.score ?? 0,
-          comments: post.num_comments ?? 0,
-          category: categorize(post.title ?? ""),
-          timestamp: new Date((post.created_utc ?? 0) * 1000).toISOString(),
-        });
-      }
-    } catch {
-      continue;
     }
+    return posts;
+  } catch {
+    return [];
   }
-  return posts;
+}
+
+async function fetchDevCommunity(): Promise<TrendItem[]> {
+  try {
+    const res = await fetch("https://dev.to/api/articles?per_page=30&sort_by=hot", {
+      headers: { "User-Agent": "TechPulseDashboard/1.0" },
+      next: { revalidate: 300 },
+    });
+    if (!res.ok) return [];
+    const articles = await res.json();
+    return (Array.isArray(articles) ? articles : []).map(
+      (article: {
+        id?: string | number;
+        title?: string;
+        url?: string;
+        positive_reactions_count?: number;
+        comments_count?: number;
+        published_at?: string;
+        tag_list?: string[];
+      }) => {
+        const title = article.title ?? "";
+        const tags = article.tag_list ?? [];
+        return {
+          id: `dev-${article.id ?? ""}`,
+          source: "dev_community" as const,
+          title,
+          url: article.url ?? "",
+          score: article.positive_reactions_count ?? 0,
+          comments: article.comments_count ?? 0,
+          category: categorize(`${title} ${tags.join(" ")}`),
+          timestamp: article.published_at ?? new Date().toISOString(),
+        };
+      },
+    );
+  } catch {
+    return [];
+  }
 }
 
 async function fetchProductHunt(): Promise<TrendItem[]> {
@@ -173,12 +240,12 @@ async function fetchProductHuntRss(): Promise<TrendItem[]> {
 }
 
 export async function GET() {
-  const [hackernews, reddit, producthunt] = await Promise.all([
+  const [hackernews, reddit, devCommunity] = await Promise.all([
     fetchHackerNews(),
     fetchReddit(),
-    fetchProductHunt(),
+    fetchDevCommunity(),
   ]);
-  const items = [...hackernews, ...reddit, ...producthunt].sort((a, b) => b.score - a.score);
+  const items = [...hackernews, ...reddit, ...devCommunity].sort((a, b) => b.score - a.score);
   return NextResponse.json({
     items: items.slice(0, 100),
     fetched_at: new Date().toISOString(),

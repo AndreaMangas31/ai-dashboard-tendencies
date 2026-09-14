@@ -66,9 +66,22 @@ async def get_trends() -> TrendsResponse:
 
         # Combine and sort by score
         all_items = hackernews_items + reddit_items + dev_community_items
-        all_items.sort(key=lambda x: x["score"], reverse=True)
+        all_items.sort(key=lambda x: x.get("score") or 0, reverse=True)
 
-        items = [TrendItem(**item) for item in all_items[:100]]
+        items: List[TrendItem] = []
+        for item in all_items[:100]:
+            try:
+                items.append(
+                    TrendItem(
+                        **{
+                            **item,
+                            "score": item.get("score") or 0,
+                            "comments": item.get("comments") or 0,
+                        }
+                    )
+                )
+            except Exception as item_error:
+                print(f"Skipping invalid trend item {item.get('id')}: {item_error}")
 
         return TrendsResponse(items=items, fetched_at=datetime.utcnow().isoformat())
     except Exception as e:
@@ -94,7 +107,7 @@ async def get_briefing():
         dev_community_items = dev_community_items if isinstance(dev_community_items, list) else []
 
         all_items = hackernews_items + reddit_items + dev_community_items
-        all_items.sort(key=lambda x: x["score"], reverse=True)
+        all_items.sort(key=lambda x: x.get("score") or 0, reverse=True)
 
         # Extract top 30 titles for the briefing
         topics = [item["title"] for item in all_items[:30]]

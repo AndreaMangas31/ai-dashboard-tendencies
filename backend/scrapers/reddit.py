@@ -1,55 +1,69 @@
-import httpx
-from datetime import datetime
+import html
+import re
+import xml.etree.ElementTree as ET
 from typing import List
+
+import httpx
+
+ATOM_NS = {"a": "http://www.w3.org/2005/Atom"}
+HEADERS = {
+    "User-Agent": "TechPulseDashboard/1.0 (news-aggregator)",
+    "Accept": "application/atom+xml, application/rss+xml, application/xml, text/xml",
+}
+LINK_RE = re.compile(r'<a href="([^"]+)">\[link\]</a>', re.IGNORECASE)
 
 
 async def fetch_reddit_trends() -> List[dict]:
-    """Fetch trending posts from r/programming and r/technology."""
-    posts = []
+    """Fetch trending posts from r/programming and r/technology via public Atom feeds."""
+    try:
+        async with httpx.AsyncClient(timeout=8.0, follow_redirects=True, headers=HEADERS) as client:
+            response = await client.get(
+                "https://www.reddit.com/r/programming+technology/.rss"
+            )
+            response.raise_for_status()
+            return parse_reddit_atom(response.text)
+    except Exception as e:
+        print(f"Error fetching Reddit trends: {e}")
+        return []
 
-    for subreddit in ["programming", "technology"]:
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(
-                    f"https://www.reddit.com/r/{subreddit}/hot.json",
-                    headers={
-                        "User-Agent": "TechPulseDashboard/1.0 (compatible; educational)"
-                    },
-                )
-                data = response.json()
 
-                for item in data.get("data", {}).get("children", [])[:15]:
-                    post = item.get("data", {})
+def parse_reddit_atom(xml_text: str) -> List[dict]:
+    posts: List[dict] = []
+    root = ET.fromstring(xml_text)
 
-                    title: str = post.get("title", "")
-                    url: str = post.get("url", "")
-                    score: int = post.get("score", 0)
-                    comments: int = post.get("num_comments", 0)
-                    created_utc: float = post.get("created_utc", 0)
-                    subreddit_name: str = post.get("subreddit", "")
-
-                    # Skip stickied posts and self-posts without meaningful content
-                    if post.get("stickied") or post.get("is_self"):
-                        continue
-
-                    category = categorize_reddit(title, subreddit_name)
-
-                    posts.append(
-                        {
-                            "id": f"reddit-{post.get('id')}",
-                            "source": "reddit",
-                            "title": title,
-                            "url": url,
-                            "score": score,
-                            "comments": comments,
-                            "category": category,
-                            "timestamp": datetime.fromtimestamp(created_utc).isoformat(),
-                        }
-                    )
-        except Exception:
+    for entry in root.findall("a:entry", ATOM_NS):
+        title = html.unescape(entry.findtext("a:title", default="", namespaces=ATOM_NS)).strip()
+        if not title or title.lower().startswith("announcement"):
             continue
 
-    return posts
+        atom_id = entry.findtext("a:id", default="", namespaces=ATOM_NS)
+        post_id = atom_id.replace("t3_", "") if atom_id else ""
+        link_el = entry.find("a:link", ATOM_NS)
+        comments_url = link_el.get("href") if link_el is not None else ""
+        content = entry.findtext("a:content", default="", namespaces=ATOM_NS)
+        link_match = LINK_RE.search(content or "")
+        url = html.unescape(link_match.group(1)) if link_match else comments_url
+        category_el = entry.find("a:category", ATOM_NS)
+        subreddit = category_el.get("term") if category_el is not None else ""
+        timestamp = entry.findtext("a:updated", default="", namespaces=ATOM_NS)
+
+        if not post_id or not url:
+            continue
+
+        posts.append(
+            {
+                "id": f"reddit-{post_id}",
+                "source": "reddit",
+                "title": title,
+                "url": url,
+                "score": 0,
+                "comments": 0,
+                "category": categorize_reddit(title, subreddit),
+                "timestamp": timestamp,
+            }
+        )
+
+    return posts[:30]
 
 
 def categorize_reddit(title: str, subreddit: str) -> str:

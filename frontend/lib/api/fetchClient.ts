@@ -16,11 +16,11 @@ export async function fetchJSON<T>(
   options?: RequestInit,
 ): Promise<T> {
   const response = await fetch(url, {
+    ...options,
     headers: {
-      "Content-Type": ContentType.JSON,
+      Accept: ContentType.JSON,
       ...options?.headers,
     },
-    ...options,
   });
 
   if (!response.ok) {
