@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 30;
+
 type Category = "ai" | "web" | "tools" | "other";
 
 export interface TrendItem {
