@@ -81,9 +81,9 @@ export async function GET(request: Request) {
     }
 
     const topicsText = topics.map((topic) => `- ${topic}`).join("\n");
-    const prompt = `Return ONLY a JSON object with key "elements" (an array).
+    const prompt = `JSON ARRAY.
 
-Structure of elements:
+Structure:
 - h1: "Tech Industry Briefing"
 - h2: sectors (AI, Video Games, Economics, Infrastructure, etc.)
 - Each sector: 1 descriptive p + EXACTLY 2 li
@@ -92,12 +92,12 @@ Structure of elements:
 Topics:
 ${topicsText}
 
-FORMAT:
-{"elements":[{"type":"h1","content":"Tech Industry Briefing","className":"text-lg font-bold"},{"type":"h2","content":"AI & Machine Learning","className":"text-base font-bold"},{"type":"p","content":"AI is rapidly evolving with strong commercial adoption.","className":"text-sm"},{"type":"li","content":"OpenAI launches a new model improving reasoning","className":"text-sm"},{"type":"li","content":"DeepMind advances scientific discovery tools","className":"text-sm"},{"type":"h2","content":"Where to Invest","className":"text-base font-bold"},{"type":"p","content":"Focus on AI infrastructure and scalable software","className":"text-sm"}]}
+FORMAT EXAMPLE:
+[{"type":"h1","content":"Tech Industry Briefing","className":"text-lg font-bold"},{"type":"h2","content":"AI","className":"text-base font-bold"},{"type":"p","content":"AI is rapidly evolving.","className":"text-sm"},{"type":"li","content":"OpenAI launches a new model","className":"text-sm"},{"type":"li","content":"DeepMind advances scientific tools","className":"text-sm"},{"type":"h2","content":"Where to Invest","className":"text-base font-bold"},{"type":"p","content":"Focus on AI infrastructure","className":"text-sm"}]
 
 RULES:
-- Valid JSON object only
-- Each p must give context
+- Output ONLY a valid JSON array
+- No markdown fences
 - ALWAYS 2 li per sector`;
 
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -113,7 +113,6 @@ RULES:
         max_tokens: 1800,
         stream: false,
         include_reasoning: false,
-        response_format: { type: "json_object" },
       }),
     });
 
