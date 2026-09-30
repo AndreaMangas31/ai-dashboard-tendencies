@@ -1,7 +1,8 @@
+import asyncio
 import html
 import re
 import xml.etree.ElementTree as ET
-from typing import List
+from typing import List, Optional
 
 import httpx
 
@@ -11,20 +12,46 @@ HEADERS = {
     "Accept": "application/atom+xml, application/rss+xml, application/xml, text/xml",
 }
 LINK_RE = re.compile(r'<a href="([^"]+)">\[link\]</a>', re.IGNORECASE)
+# El JSON de Reddit está bloqueado (403). Usamos el feed Atom público.
+# %2B = "+" de r/programming+technology; sin encodear, algunos runtimes lo tratan como espacio.
+# Si el feed combinado falla (típico 429), caemos a r/programming solo.
+FEED_URLS = [
+    "https://www.reddit.com/r/programming%2Btechnology/.rss",
+    "https://www.reddit.com/r/programming/.rss",
+]
 
 
 async def fetch_reddit_trends() -> List[dict]:
-    """Fetch trending posts from r/programming and r/technology via public Atom feeds."""
+    """Fetch trending posts from public Reddit Atom feeds."""
+    # Solo se ejecuta cuando alguien llama a /api/trends o /api/briefing; no hay un loop propio.
     try:
         async with httpx.AsyncClient(timeout=8.0, follow_redirects=True, headers=HEADERS) as client:
-            response = await client.get(
-                "https://www.reddit.com/r/programming+technology/.rss"
-            )
-            response.raise_for_status()
-            return parse_reddit_atom(response.text)
+            for url in FEED_URLS:
+                xml_text = await fetch_reddit_xml(client, url)
+                if not xml_text:
+                    continue
+                posts = parse_reddit_atom(xml_text)
+                if posts:
+                    return posts
+            return []
     except Exception as e:
         print(f"Error fetching Reddit trends: {e}")
         return []
+
+
+async def fetch_reddit_xml(client: httpx.AsyncClient, url: str) -> Optional[str]:
+    response = await client.get(url)
+    # Reddit deja ~1 request y luego 429 (~45s). Un refresh seguido o la IP de Vercel
+    # (compartida) vacía la columna si no reintentamos.
+    if response.status_code in {429, 503}:
+        await asyncio.sleep(2)
+        response = await client.get(url)
+    if response.status_code >= 400:
+        print(f"Reddit feed {url} returned {response.status_code}")
+        return None
+    if "<entry" not in response.text:
+        return None
+    return response.text
 
 
 def parse_reddit_atom(xml_text: str) -> List[dict]:
@@ -56,6 +83,7 @@ def parse_reddit_atom(xml_text: str) -> List[dict]:
                 "source": "reddit",
                 "title": title,
                 "url": url,
+                # El Atom público no trae score ni número de comentarios.
                 "score": 0,
                 "comments": 0,
                 "category": categorize_reddit(title, subreddit),

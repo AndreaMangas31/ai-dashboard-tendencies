@@ -72,43 +72,79 @@ export async function fetchHackerNews(): Promise<TrendItem[]> {
   }
 }
 
+const REDDIT_HEADERS = {
+  "User-Agent": "TechPulseDashboard/1.0 (news-aggregator)",
+  Accept: "application/atom+xml, application/rss+xml, application/xml, text/xml",
+};
+
+// El JSON de Reddit está bloqueado (403). El feed Atom sí funciona, pero ratea muy agresivo.
+// %2B evita que el "+" del multi-reddit se interprete mal. Fallback: solo r/programming.
+const REDDIT_FEED_URLS = [
+  "https://www.reddit.com/r/programming%2Btechnology/.rss",
+  "https://www.reddit.com/r/programming/.rss",
+];
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchRedditXml(url: string): Promise<string | null> {
+  const request = (cache: RequestCache | undefined, revalidate?: number) =>
+    fetch(url, {
+      headers: REDDIT_HEADERS,
+      // 15 min de cache en 200 para no pegarle a Reddit en cada /api/trends.
+      ...(cache ? { cache } : { next: { revalidate: revalidate ?? 900 } }),
+    });
+
+  let res = await request(undefined, 900);
+  // 429 = cupo de Reddit agotado (~1 req). No cachear el fallo: reintento sin store.
+  if (res.status === 429 || res.status === 503) {
+    await sleep(2000);
+    res = await request("no-store");
+  }
+  if (!res.ok) return null;
+  const xml = await res.text();
+  return xml.includes("<entry") ? xml : null;
+}
+
+function parseRedditAtom(xml: string): TrendItem[] {
+  const posts: TrendItem[] = [];
+  for (const match of [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)].slice(0, 30)) {
+    const block = match[1];
+    const titleMatch = block.match(/<title>(?:<!\[CDATA\[(.*?)\]\]>|(.*?))<\/title>/);
+    const title = htmlUnescape((titleMatch?.[1] || titleMatch?.[2] || "").trim());
+    if (!title || title.toLowerCase().startsWith("announcement")) continue;
+    const atomId = block.match(/<id>(.*?)<\/id>/)?.[1] ?? "";
+    const postId = atomId.replace("t3_", "");
+    const commentsUrl = block.match(/<link href="([^"]+)"/)?.[1] ?? "";
+    const externalUrl = htmlUnescape(block.match(/<a href="([^"]+)">\[link\]<\/a>/i)?.[1] ?? "");
+    const url = externalUrl || commentsUrl;
+    const date = block.match(/<updated>(.*?)<\/updated>/)?.[1];
+    if (!postId || !url) continue;
+    posts.push({
+      id: `reddit-${postId}`,
+      source: "reddit",
+      title,
+      url,
+      // El feed Atom no incluye votos ni comentarios.
+      score: 0,
+      comments: 0,
+      category: categorize(title),
+      timestamp: date ?? new Date().toISOString(),
+    });
+  }
+  return posts;
+}
+
 export async function fetchReddit(): Promise<TrendItem[]> {
   try {
-    const res = await fetch("https://www.reddit.com/r/programming+technology/.rss", {
-      headers: {
-        "User-Agent": "TechPulseDashboard/1.0 (news-aggregator)",
-        Accept: "application/atom+xml, application/rss+xml, application/xml, text/xml",
-      },
-      next: { revalidate: 300 },
-    });
-    if (!res.ok) return [];
-    const xml = await res.text();
-    const entries = [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)].slice(0, 30);
-    const posts: TrendItem[] = [];
-    for (const match of entries) {
-      const block = match[1];
-      const titleMatch = block.match(/<title>(?:<!\[CDATA\[(.*?)\]\]>|(.*?))<\/title>/);
-      const title = htmlUnescape((titleMatch?.[1] || titleMatch?.[2] || "").trim());
-      if (!title || title.toLowerCase().startsWith("announcement")) continue;
-      const atomId = block.match(/<id>(.*?)<\/id>/)?.[1] ?? "";
-      const postId = atomId.replace("t3_", "");
-      const commentsUrl = block.match(/<link href="([^"]+)"/)?.[1] ?? "";
-      const externalUrl = htmlUnescape(block.match(/<a href="([^"]+)">\[link\]<\/a>/i)?.[1] ?? "");
-      const url = externalUrl || commentsUrl;
-      const date = block.match(/<updated>(.*?)<\/updated>/)?.[1];
-      if (!postId || !url) continue;
-      posts.push({
-        id: `reddit-${postId}`,
-        source: "reddit",
-        title,
-        url,
-        score: 0,
-        comments: 0,
-        category: categorize(title),
-        timestamp: date ?? new Date().toISOString(),
-      });
+    for (const url of REDDIT_FEED_URLS) {
+      const xml = await fetchRedditXml(url);
+      if (!xml) continue;
+      const posts = parseRedditAtom(xml);
+      if (posts.length) return posts;
     }
-    return posts;
+    return [];
   } catch {
     return [];
   }

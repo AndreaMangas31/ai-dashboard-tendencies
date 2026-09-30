@@ -160,6 +160,7 @@ ${topics.map((topic) => `- ${topic}`).join("\n")}`,
 }
 
 export async function GET() {
+  // Otra vía al scraper de Reddit: solo al abrir Today's Brief, no en bucle.
   const [hackernews, reddit, devCommunity] = await Promise.all([
     fetchHackerNews(),
     fetchReddit(),

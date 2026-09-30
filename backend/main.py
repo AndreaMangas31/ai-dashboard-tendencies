@@ -50,7 +50,8 @@ class TrendsResponse(BaseModel):
 async def get_trends() -> TrendsResponse:
     """Fetch trending items from all sources."""
     try:
-        # Fetch from all sources concurrently
+        # Una llamada a /api/trends = una pasada a cada fuente (sin loop).
+        # Reddit se toca solo aquí (y en /api/briefing); el front no llama a Reddit.
         hackernews_task = fetch_hackernews_trends()
         reddit_task = fetch_reddit_trends()
         dev_community_task = fetch_dev_community_trends()

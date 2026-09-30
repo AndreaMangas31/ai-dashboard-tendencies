@@ -74,7 +74,7 @@ const useHomeLogic = () => {
   const [briefingOpen, setBriefingOpen] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<Category>("all");
 
-  // Initial fetch
+  // El front solo pega a /api/trends: al cargar, al pulsar Refresh, y cada 5 min.
   useEffect(() => {
     refetch();
   }, [refetch]);
