@@ -1,3 +1,4 @@
+import { CustomButton } from "@/components/CustomButton";
 import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { briefingToPlainText } from "@/lib/helpers/briefingToPlainText";
 import { ParsedElement } from "@/lib/helpers/useMarkdownParser";
@@ -11,23 +12,14 @@ export function CopyBriefingButton({ elements }: CopyBriefingButtonProps) {
 
   return (
     <div className="border-t border-slate-700 p-6">
-      <button
+      <CustomButton
+        variant={copied ? "success" : "secondary"}
+        icon={copied ? <CheckIcon /> : <CopyIcon />}
         onClick={() => copy(briefingToPlainText(elements))}
-        className={`
-          w-full px-4 py-2 rounded-lg font-medium text-sm
-          transition-all duration-200
-          ${
-            copied
-              ? "bg-green-600 text-white"
-              : "bg-blue-600 text-white hover:bg-blue-700 active:scale-95"
-          }
-        `}
+        className="w-full active:scale-95"
       >
-        <span className="flex items-center justify-center gap-2">
-          {copied ? <CheckIcon /> : <CopyIcon />}
-          {copied ? "Copied!" : "Copy to Clipboard"}
-        </span>
-      </button>
+        {copied ? "Copied!" : "Copy to Clipboard"}
+      </CustomButton>
     </div>
   );
 }

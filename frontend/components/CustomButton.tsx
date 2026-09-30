@@ -1,6 +1,6 @@
 import React from "react";
 
-type Variant = "primary" | "secondary" | "ghost";
+type Variant = "primary" | "secondary" | "ghost" | "success";
 
 interface CustomButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
@@ -16,6 +16,7 @@ const variants: Record<Variant, string> = {
   secondary: "bg-purple-500/60 text-white hover:bg-purple-600 ",
   ghost:
     "bg-transparent text-gray-400 hover:text-purple-400 hover:bg-purple-500/10",
+  success: "bg-emerald-600/80 text-white",
 };
 
 export const CustomButton: React.FC<CustomButtonProps> = ({
