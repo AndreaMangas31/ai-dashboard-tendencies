@@ -1,8 +1,9 @@
 import asyncio
 import html
 import re
+import time
 import xml.etree.ElementTree as ET
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import httpx
 
@@ -19,39 +20,55 @@ FEED_URLS = [
     "https://www.reddit.com/r/programming%2Btechnology/.rss",
     "https://www.reddit.com/r/programming/.rss",
 ]
+# Reddit da ~1 petición por ventana por IP y las IPs de Vercel son compartidas:
+# guardamos la última lista buena y solo volvemos a Reddit cuando está vieja.
+FRESH_SECONDS = 10 * 60
+MAX_RESET_WAIT_SECONDS = 8
+
+_last_posts: List[dict] = []
+_last_fetched_at = 0.0
 
 
 async def fetch_reddit_trends() -> List[dict]:
-    """Fetch trending posts from public Reddit Atom feeds."""
+    """Fetch trending posts from public Reddit Atom feeds, falling back to the last good list."""
+    global _last_posts, _last_fetched_at
     # Solo se ejecuta cuando alguien llama a /api/trends o /api/briefing; no hay un loop propio.
+    if _last_posts and time.time() - _last_fetched_at < FRESH_SECONDS:
+        return _last_posts
     try:
-        async with httpx.AsyncClient(timeout=8.0, follow_redirects=True, headers=HEADERS) as client:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, headers=HEADERS) as client:
             for url in FEED_URLS:
-                xml_text = await fetch_reddit_xml(client, url)
+                status, xml_text = await fetch_reddit_xml(client, url)
+                # Las dos URLs comparten cupo: tras un 429 probar la otra solo gasta otra petición.
+                if status == 429:
+                    break
                 if not xml_text:
                     continue
                 posts = parse_reddit_atom(xml_text)
                 if posts:
+                    _last_posts, _last_fetched_at = posts, time.time()
                     return posts
-            return []
     except Exception as e:
         print(f"Error fetching Reddit trends: {e}")
-        return []
+    return _last_posts
 
 
-async def fetch_reddit_xml(client: httpx.AsyncClient, url: str) -> Optional[str]:
+async def fetch_reddit_xml(client: httpx.AsyncClient, url: str) -> Tuple[int, Optional[str]]:
     response = await client.get(url)
-    # Reddit deja ~1 request y luego 429 (~45s). Un refresh seguido o la IP de Vercel
-    # (compartida) vacía la columna si no reintentamos.
-    if response.status_code in {429, 503}:
-        await asyncio.sleep(2)
-        response = await client.get(url)
+    if response.status_code == 429:
+        try:
+            reset = float(response.headers.get("x-ratelimit-reset", ""))
+        except ValueError:
+            reset = None
+        if reset is not None and reset <= MAX_RESET_WAIT_SECONDS:
+            await asyncio.sleep(reset + 0.5)
+            response = await client.get(url)
     if response.status_code >= 400:
         print(f"Reddit feed {url} returned {response.status_code}")
-        return None
+        return response.status_code, None
     if "<entry" not in response.text:
-        return None
-    return response.text
+        return response.status_code, None
+    return response.status_code, response.text
 
 
 def parse_reddit_atom(xml_text: str) -> List[dict]:

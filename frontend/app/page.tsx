@@ -7,7 +7,7 @@ import { SourceColumn } from "@/components/main-page/SourceColumn";
 import { BriefingPanel } from "@/components/briefing/BriefingPanel";
 import { RefreshBar } from "@/components/main-page/RefreshBar";
 import { Header } from "@/components/main-page/Header";
-import { Category, Source } from "@/lib/api/types";
+import { Category, Source, SourceStatus } from "@/lib/api/types";
 import { CategoryFilter } from "@/components/main-page/CategoryFilter";
 
 export default function Home() {
@@ -22,11 +22,12 @@ export default function Home() {
     refetch,
   } = useHomeLogic();
 
-  const columnItems = itemsBySource?.map(({ source, items }) => (
+  const columnItems = itemsBySource?.map(({ source, items, status }) => (
     <SourceColumn
       key={source}
       source={source}
       items={items}
+      status={status}
       loading={loading}
       filter={selectedCategory}
     />
@@ -99,9 +100,9 @@ const useHomeLogic = () => {
   const devCommunityItems = trends.filter(
     (item) => item.source === "dev_community",
   );
-  const itemsBySource: { source: Source; items: TrendItem[] }[] = [
+  const itemsBySource: { source: Source; items: TrendItem[]; status?: SourceStatus }[] = [
     { source: "hackernews", items: hackernewsItems },
-    { source: "reddit", items: redditItems },
+    { source: "reddit", items: redditItems, status: data?.source_status?.reddit },
     { source: "dev_community", items: devCommunityItems },
   ];
   return {

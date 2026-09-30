@@ -19,7 +19,10 @@ export const CategoryLabels = {
 
 export type Category = keyof typeof CategoryLabels;
 
+export type SourceStatus = "ok" | "stale" | "rate_limited" | "error";
+
 export interface TrendsResponse {
   items: TrendItem[];
   fetched_at: string;
+  source_status?: Partial<Record<Source, SourceStatus>>;
 }

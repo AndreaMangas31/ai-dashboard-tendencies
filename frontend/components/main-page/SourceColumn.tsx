@@ -3,7 +3,7 @@
 import { TrendItem } from "@/lib/api";
 import { TrendCard } from "../TrendCard";
 import { SkeletonLoader } from "../SkeletonLoader";
-import { Source } from "@/lib/api/types";
+import { Source, SourceStatus } from "@/lib/api/types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { SOURCE_CLASS } from "@/lib/helpers/colorCards";
@@ -13,13 +13,21 @@ interface SourceColumnProps {
   items: TrendItem[];
   loading: boolean;
   filter: string;
+  status?: SourceStatus;
 }
+
+const STATUS_MESSAGES: Partial<Record<SourceStatus, string>> = {
+  stale: "Showing the last saved list, the source is rate-limiting us right now.",
+  rate_limited: "The source is rate-limiting requests. Try refreshing in a minute.",
+  error: "Couldn't reach the source. Try refreshing in a minute.",
+};
 
 export function SourceColumn({
   source,
   items,
   loading,
   filter,
+  status,
 }: SourceColumnProps) {
   const info = SOURCE_CLASS[source];
   const filteredItems =
@@ -52,6 +60,9 @@ export function SourceColumn({
 
       {/* Items */}
       <div className="flex-1 space-y-3 pb-8">
+        {!loading && status === "stale" && (
+          <p className="text-xs text-amber-400/80 px-1">{STATUS_MESSAGES.stale}</p>
+        )}
         {loading ? (
           // Skeleton loaders
           <>
@@ -63,7 +74,7 @@ export function SourceColumn({
           filteredItems.map((item) => <TrendCard key={item.id} item={item} />)
         ) : (
           <div className="text-center py-8 text-slate-500">
-            <p>No trends found</p>
+            <p>{(status && STATUS_MESSAGES[status]) || "No trends found"}</p>
           </div>
         )}
       </div>

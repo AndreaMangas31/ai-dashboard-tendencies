@@ -1,3 +1,5 @@
+import { getCache } from "@vercel/functions";
+
 export type Category = "ai" | "web" | "tools" | "other";
 
 export interface TrendItem {
@@ -72,46 +74,88 @@ export async function fetchHackerNews(): Promise<TrendItem[]> {
   }
 }
 
-export const REDDIT_HEADERS = {
+const REDDIT_HEADERS = {
   "User-Agent": "TechPulseDashboard/1.0 (news-aggregator)",
   Accept: "application/atom+xml, application/rss+xml, application/xml, text/xml",
 };
 
 // El JSON de Reddit está bloqueado (403). El feed Atom sí funciona, pero ratea muy agresivo.
 // %2B evita que el "+" del multi-reddit se interprete mal. Fallback: solo r/programming.
-export const REDDIT_FEED_URLS = [
+const REDDIT_FEED_URLS = [
   "https://www.reddit.com/r/programming%2Btechnology/.rss",
   "https://www.reddit.com/r/programming/.rss",
 ];
+
+// Medido desde Vercel (iad1): no hay bloqueo de IP, pero Reddit da ~1 petición por ventana
+// por IP (x-ratelimit-remaining = 0 tras la primera) y las IPs de Vercel son compartidas.
+// Por eso guardamos la última lista buena y solo volvemos a Reddit cuando está vieja.
+const REDDIT_CACHE_KEY = "reddit:posts";
+const REDDIT_FRESH_MS = 10 * 60 * 1000;
+const REDDIT_KEEP_SECONDS = 24 * 60 * 60;
+// Solo esperamos al reset si es corto; si no, servimos la copia vieja.
+const REDDIT_MAX_RESET_WAIT_S = 8;
+
+export type RedditStatus = "ok" | "stale" | "rate_limited" | "error";
+
+interface RedditSnapshot {
+  posts: TrendItem[];
+  fetchedAt: number;
+}
+
+type RedditXmlResult = { xml: string } | { status: number };
+
+let memorySnapshot: RedditSnapshot | null = null;
+let inFlight: Promise<{ items: TrendItem[]; status: RedditStatus }> | null = null;
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fetchRedditXml(url: string): Promise<string | null> {
-  const request = (cache: RequestCache | undefined, revalidate?: number) =>
-    fetch(url, {
-      headers: REDDIT_HEADERS,
-      // 15 min de cache en 200 para no pegarle a Reddit en cada /api/trends.
-      ...(cache ? { cache } : { next: { revalidate: revalidate ?? 900 } }),
-    });
+async function readSnapshot(): Promise<RedditSnapshot | null> {
+  try {
+    const cached = (await getCache().get(REDDIT_CACHE_KEY)) as RedditSnapshot | null;
+    if (cached?.posts?.length && (!memorySnapshot || cached.fetchedAt > memorySnapshot.fetchedAt)) {
+      memorySnapshot = cached;
+    }
+  } catch (error) {
+    console.warn("[reddit] runtime cache read failed", error);
+  }
+  return memorySnapshot;
+}
 
-  let res = await request(undefined, 900);
-  // 429 = cupo de Reddit agotado (~1 req). No cachear el fallo: reintento sin store.
-  if (res.status === 429 || res.status === 503) {
-    await sleep(2000);
-    res = await request("no-store");
+async function writeSnapshot(posts: TrendItem[]) {
+  memorySnapshot = { posts, fetchedAt: Date.now() };
+  try {
+    await getCache().set(REDDIT_CACHE_KEY, memorySnapshot, {
+      ttl: REDDIT_KEEP_SECONDS,
+      name: "reddit-posts",
+    });
+  } catch (error) {
+    console.warn("[reddit] runtime cache write failed", error);
+  }
+}
+
+async function fetchRedditXml(url: string): Promise<RedditXmlResult> {
+  const request = () => fetch(url, { headers: REDDIT_HEADERS, cache: "no-store" });
+
+  let res = await request();
+  if (res.status === 429) {
+    const reset = Number(res.headers.get("x-ratelimit-reset"));
+    if (Number.isFinite(reset) && reset <= REDDIT_MAX_RESET_WAIT_S) {
+      await sleep(reset * 1000 + 500);
+      res = await request();
+    }
   }
   if (!res.ok) {
-    console.warn(`[reddit] ${url} -> ${res.status} ${res.headers.get("content-type") ?? ""}`);
-    return null;
+    console.warn(`[reddit] ${url} -> ${res.status} reset=${res.headers.get("x-ratelimit-reset")}`);
+    return { status: res.status };
   }
   const xml = await res.text();
   if (!xml.includes("<entry")) {
     console.warn(`[reddit] ${url} -> ${res.status} without <entry>: ${xml.slice(0, 120)}`);
-    return null;
+    return { status: res.status };
   }
-  return xml;
+  return { xml };
 }
 
 function parseRedditAtom(xml: string): TrendItem[] {
@@ -143,18 +187,50 @@ function parseRedditAtom(xml: string): TrendItem[] {
   return posts;
 }
 
-export async function fetchReddit(): Promise<TrendItem[]> {
+async function refreshReddit(): Promise<{ items: TrendItem[]; status: RedditStatus }> {
+  const snapshot = await readSnapshot();
+  if (snapshot && Date.now() - snapshot.fetchedAt < REDDIT_FRESH_MS) {
+    return { items: snapshot.posts, status: "ok" };
+  }
+
+  let rateLimited = false;
   try {
     for (const url of REDDIT_FEED_URLS) {
-      const xml = await fetchRedditXml(url);
-      if (!xml) continue;
-      const posts = parseRedditAtom(xml);
-      if (posts.length) return posts;
+      const result = await fetchRedditXml(url);
+      if ("status" in result) {
+        // Las dos URLs comparten cupo: tras un 429 probar la otra solo gasta otra petición.
+        if (result.status === 429) {
+          rateLimited = true;
+          break;
+        }
+        continue;
+      }
+      const posts = parseRedditAtom(result.xml);
+      if (posts.length) {
+        await writeSnapshot(posts);
+        return { items: posts, status: "ok" };
+      }
     }
-    return [];
-  } catch {
-    return [];
+  } catch (error) {
+    console.warn("[reddit] fetch failed", error);
   }
+
+  if (snapshot) return { items: snapshot.posts, status: "stale" };
+  return { items: [], status: rateLimited ? "rate_limited" : "error" };
+}
+
+// /api/trends y /api/briefing piden Reddit a la vez: compartimos la misma petición en curso.
+export async function getRedditTrends(): Promise<{ items: TrendItem[]; status: RedditStatus }> {
+  if (!inFlight) {
+    inFlight = refreshReddit().finally(() => {
+      inFlight = null;
+    });
+  }
+  return inFlight;
+}
+
+export async function fetchReddit(): Promise<TrendItem[]> {
+  return (await getRedditTrends()).items;
 }
 
 export async function fetchDevCommunity(): Promise<TrendItem[]> {
