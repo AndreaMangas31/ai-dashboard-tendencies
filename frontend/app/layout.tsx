@@ -6,10 +6,6 @@ export const metadata: Metadata = {
   title: "IntelliTrends - Daily Tech Trends Dashboard",
   description:
     "Aggregated trending content from Hacker News, Reddit, and Product Hunt with AI-powered briefing",
-  //Add font links
-  icons: {
-    icon: "/favicon.ico",
-  },
 };
 
 export default function RootLayout({

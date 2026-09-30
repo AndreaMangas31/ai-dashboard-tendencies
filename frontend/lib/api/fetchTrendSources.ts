@@ -72,14 +72,14 @@ export async function fetchHackerNews(): Promise<TrendItem[]> {
   }
 }
 
-const REDDIT_HEADERS = {
+export const REDDIT_HEADERS = {
   "User-Agent": "TechPulseDashboard/1.0 (news-aggregator)",
   Accept: "application/atom+xml, application/rss+xml, application/xml, text/xml",
 };
 
 // El JSON de Reddit está bloqueado (403). El feed Atom sí funciona, pero ratea muy agresivo.
 // %2B evita que el "+" del multi-reddit se interprete mal. Fallback: solo r/programming.
-const REDDIT_FEED_URLS = [
+export const REDDIT_FEED_URLS = [
   "https://www.reddit.com/r/programming%2Btechnology/.rss",
   "https://www.reddit.com/r/programming/.rss",
 ];
@@ -102,9 +102,16 @@ async function fetchRedditXml(url: string): Promise<string | null> {
     await sleep(2000);
     res = await request("no-store");
   }
-  if (!res.ok) return null;
+  if (!res.ok) {
+    console.warn(`[reddit] ${url} -> ${res.status} ${res.headers.get("content-type") ?? ""}`);
+    return null;
+  }
   const xml = await res.text();
-  return xml.includes("<entry") ? xml : null;
+  if (!xml.includes("<entry")) {
+    console.warn(`[reddit] ${url} -> ${res.status} without <entry>: ${xml.slice(0, 120)}`);
+    return null;
+  }
+  return xml;
 }
 
 function parseRedditAtom(xml: string): TrendItem[] {
