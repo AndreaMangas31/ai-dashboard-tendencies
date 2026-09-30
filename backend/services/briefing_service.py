@@ -109,7 +109,8 @@ GENERATE NOW:"""
                 }
             ],
             temperature=1,
-            max_tokens=800,
+            max_tokens=4000,
+            reasoning_effort="low",
             top_p=1,
             stream=True,
             stop=None,
